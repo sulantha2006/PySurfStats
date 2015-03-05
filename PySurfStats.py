@@ -1,6 +1,6 @@
 __author__ = 'sulantha'
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import pandas as pd
 import statsmodels.formula.api as smf
 import time
@@ -8,7 +8,7 @@ from SurfStatsLinearModel import SurfStatsLinearModel
 
 
 multiValueRange = 40962
-executor = ThreadPoolExecutor(max_workers=24)
+
 
 def readMultiValuedVars(fileList):
     return [open(f, 'r').readlines() for f in fileList]
@@ -32,12 +32,17 @@ multiVarDict = {var: [readMultiValuedVars(mainTable[var])] for var in multiValue
 lmoObjs = [0]*multiValueRange
 
 t0 = time.time()
+functionData = []
+
 for i in range(multiValueRange):
     forTable = mainTable
     for k in multiValueVars:
         newVarColumn = [multiVarDict[k][0][x][i] for x in range(len(multiVarDict[k][0]))]
         forTable.loc[:, k] = [float(value.strip()) for value in newVarColumn]
-    executor.submit(runLM(formulaString, forTable, i))
+    functionData.append([formulaString, forTable, i])
+
+with ProcessPoolExecutor() as executor:
+    executor.map(runLM, functionData)
     #pool.apply_async(runLM(formulaString, forTable, i))
     #est = smf.ols(formula=formulaString, data=forTable).fit()
     #lmoObjs[i] = est
