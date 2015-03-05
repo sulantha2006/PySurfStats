@@ -42,3 +42,8 @@ class SurfStatsLinearModel:
         for lmo in lmoObjectsList:
             self.r_sqs.append(lmo.rsquared)
 
+
+    def print_stats(self):
+        print(self.pvals.head(10))
+        print(self.tvals.head(10))
+

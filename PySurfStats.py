@@ -1,21 +1,19 @@
 __author__ = 'sulantha'
 
-import pandas as pd
-import numpy as np
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
 from concurrent.futures import ThreadPoolExecutor
-
+import pandas as pd
+import statsmodels.formula.api as smf
+import time
 from SurfStatsLinearModel import SurfStatsLinearModel
 
+
 multiValueRange = 40962
-executor = ThreadPoolExecutor(max_workers=10)
+executor = ThreadPoolExecutor(max_workers=24)
 
 def readMultiValuedVars(fileList):
     return [open(f, 'r').readlines() for f in fileList]
 
 def runLM(formulaString, dataTable, index):
-    print('Running : {0}'.format(index))
     global lmoObjs
     lmoObjs[index] = smf.ols(formula=formulaString, data=dataTable).fit()
 
@@ -33,14 +31,17 @@ multiVarDict = {var: [readMultiValuedVars(mainTable[var])] for var in multiValue
 
 lmoObjs = [0]*multiValueRange
 
+t0 = time.time()
 for i in range(multiValueRange):
     forTable = mainTable
     for k in multiValueVars:
         newVarColumn = [multiVarDict[k][0][x][i] for x in range(len(multiVarDict[k][0]))]
         forTable.loc[:, k] = [float(value.strip()) for value in newVarColumn]
     executor.submit(runLM(formulaString, forTable, i))
+    #pool.apply_async(runLM(formulaString, forTable, i))
     #est = smf.ols(formula=formulaString, data=forTable).fit()
     #lmoObjs[i] = est
-
-
+t1 = time.time()
+print('Time : {0}'.format(t1-t0))
 sf = SurfStatsLinearModel(lmoObjs)
+sf.print_stats()
